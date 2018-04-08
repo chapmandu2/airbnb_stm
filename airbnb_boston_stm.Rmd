@@ -21,6 +21,7 @@ output:
 
 ```{r setup, message=FALSE}
 library(dplyr, quietly=TRUE)
+library(tidyr, quietly=TRUE)
 library(readr, quietly=TRUE)
 library(purrr, quietly=TRUE)
 library(stm, quietly=TRUE)
@@ -256,3 +257,45 @@ tidy(topic_model) %>%
 
 From this analysis the topic modelling seems to have picked out topics associated with the words luxury and studio which are associated with price in the expected direction.
 
+### Combined plot of all topics
+
+In the plot below, the top terms for each topic are plotted, and colour represents the steepness of the slope of the regression line.
+
+First extract topic betas with tidytext tidier.
+
+```{r}
+topic_top_terms <- tidy(topic_model) %>%
+  group_by(topic) %>%
+  top_n(10,beta) %>%
+  ungroup()
+topic_top_terms
+```
+
+Then extract slopes from the effectEstimate object:
+
+```{r}
+slope_ests <- tidyr::crossing(topic=1:best_k, rep=1:20) %>%
+  mutate(slope_est = map2_dbl(topic, rep, ~est_effect$parameters[[.x]][[.y]]$est['score'])) %>%
+  group_by(topic) %>%
+  summarise(slope_est=mean(slope_est))
+slope_ests
+```
+
+To make the plot, join the top terms and the slope estimates and then facet by topoic,.  Interpret the plot as below:
+
+- contribution of terms to the topic shown by bar
+- colour represents slope:
+  - blue = more prevalent in higher priced property descriptions
+  - red = more prevalent in lower priced property descriptions
+  
+```{r}
+topic_top_terms %>%
+  inner_join(slope_ests) %>%
+  mutate(topic = paste0('Topic ', topic)) %>%
+  ggplot(aes(term, beta, fill=slope_est)) +
+    geom_col(alpha=0.8, show_legend=FALSE) +
+    scale_fill_gradient2(mid='lightgray') +
+    facet_wrap(~ topic, scales='free_y') +
+    coord_flip() +
+    labs(x=NULL, y=expression(beta)) + theme_bw()
+```
