@@ -125,3 +125,72 @@ Now convert the dataframes in an stm corpus object
 comments_stmc <- asSTMCorpus(comments_dfm, data=comments_dfm_meta)
 ```
 
+# Topic modelling
+
+## Identify optimal value of K
+
+### Set up search grid
+
+Specify the range of topic numbers that we want to search.  Since we can parallise across up to 16 cores we will look at 30 different values of K - leaving one core free.
+
+```{r}
+n_topics <- seq(4,33,1)
+length(n_topics)
+
+```
+
+### Run the grid search
+
+Now run the grid search over the 30 values of K specified.
+
+```{r searchK, eval=FALSE}
+topic_store <- searchK(comments_stmc$documents,
+                       comments_stmc$vocab,
+                       K = n_topics,
+                       data = comments_stmc$data,
+                       prevalence = ~ score,
+                       max.em.its = 20,
+                       cores = 15)
+```
+
+### Evaluate the models generated
+
+The stm package includes functionality to generate some useful diagnostic plots:
+
+```{r eval=FALSE}
+plot(topic_store)
+```
+
+Not very clear in this case, probably don't have sufficient observations, but 8 looks reasonable.
+
+```{r}
+best_k <- 8
+```
+
+## Fit the topic model
+
+Now fit the topic model with the chosen number of topics.
+
+```{r fit-model}
+topic_model <- stm(comments_stmc$documents,
+                       comments_stmc$vocab,
+                       K = n_topics,
+                       data = comments_stmc$data,
+                       prevalence = ~ score,
+                       max.em.its = 20)
+```
+
+Generate a summary of the topic model.  For each topic, the topi words according to four different metrics are generated.  Top probability is just the most common words, the other metrics use different forms of weighting to pick up words that are more exlusive to the topic.  See the stm vignette and package documentation for more information.
+
+```{r}
+summary(topic_model)
+```
+
+## Estimate the effect of price
+
+Now estimate the effect of the price covariate on the prevalence of each topic:
+
+```{r est-effect}
+est_effect <- estimateEffect(1:best_k ~ score, topic_model, meta=comments_dfm_meta)
+```
+
