@@ -1,0 +1,49 @@
+---
+title: "AirBnB Boston"
+author: "Phil Chapman"
+date: "08/04/2018"
+output: 
+  html_document:
+    number_sections: yes
+    theme: cosmo
+    highlight: tango
+    toc: yes
+    toc_depth: 3
+    code_folding: show
+---
+
+# Introduction
+
+
+# Analysis set up
+
+## Load libraries
+
+```{r setup, message=FALSE}
+library(dplyr, quietly=TRUE)
+library(readr, quietly=TRUE)
+library(purrr, quietly=TRUE)
+library(stm, quietly=TRUE)
+library(tidytext, quietly=TRUE)
+library(ggplot2, quietly=TRUE)
+library(quanteda, quietly=TRUE)
+```
+
+## Load data
+
+List the files in the data area.  These were downloaded from Kaggle at https://www.kaggle.com/airbnb/boston.
+
+```{r}
+datapath <- '~/data/boston-airbnb-open-data/'
+list.files(datapath)
+```
+
+Load the data into R using the `readr` package.
+
+```{r warnings=FALSE}
+listings <- readr::read_csv(file.path(datapath, 'listings.csv'))
+dim(listings)
+colnames(listings)
+```
+
+
