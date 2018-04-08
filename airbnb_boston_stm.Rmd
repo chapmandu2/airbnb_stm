@@ -145,12 +145,12 @@ Now run the grid search over the 30 values of K specified.
 
 ```{r searchK, eval=FALSE}
 topic_store <- searchK(comments_stmc$documents,
-                       comments_stmc$vocab,
-                       K = n_topics,
-                       data = comments_stmc$data,
-                       prevalence = ~ score,
-                       max.em.its = 20,
-                       cores = 15)
+  comments_stmc$vocab,
+  K = n_topics,
+  data = comments_stmc$data,
+  prevalence = ~ score,
+  max.em.its = 20,
+  cores = 15)
 ```
 
 ### Evaluate the models generated
@@ -173,11 +173,12 @@ Now fit the topic model with the chosen number of topics.
 
 ```{r fit-model}
 topic_model <- stm(comments_stmc$documents,
-                       comments_stmc$vocab,
-                       K = n_topics,
-                       data = comments_stmc$data,
-                       prevalence = ~ score,
-                       max.em.its = 20)
+  comments_stmc$vocab,
+  K = best_k,
+  data = comments_stmc$data,
+  prevalence = ~ score,
+  max.em.its = 20,
+  verbose=FALSE)
 ```
 
 Generate a summary of the topic model.  For each topic, the topi words according to four different metrics are generated.  Top probability is just the most common words, the other metrics use different forms of weighting to pick up words that are more exlusive to the topic.  See the stm vignette and package documentation for more information.
