@@ -195,3 +195,64 @@ Now estimate the effect of the price covariate on the prevalence of each topic:
 est_effect <- estimateEffect(1:best_k ~ score, topic_model, meta=comments_dfm_meta)
 ```
 
+
+# Explore topic model
+
+## Basic plots
+
+### Convergence
+
+How well did the topic model converge?
+
+```{r}
+plot(topic_model$convergence$bound, type='l')
+```
+
+### Overview of topics
+
+Let's see a summary of the topic model.
+
+```{r}
+plot(topic_model, type='summary')
+```
+
+## Explore covariate effects
+
+### Visualise effects
+
+First just plot the effect of price on topic prevalence for topics 1-4:
+
+```{r}
+plot(est_effect, covariate='score', method='continuous', topics=1:4)
+```
+
+And now topics 5-8
+
+```{r}
+plot(est_effect, covariate='score', method='continuous', topics=5:8)
+```
+
+### Focus on topics 5 and 8
+
+What are topics 5 and 8?  These seem to have a positive and negative relationship with price respectively (up vs down slope).  Terms like boston and appartment tend to appear in many topics, so in this case looking at FREX, score and lift is useful as we see words exclusive to these topics.
+
+```{r}
+labelTopics(topic_model, c(5,8), n=10)
+```
+
+Generate a wordcloud of most common terms for each:
+
+```{r}
+cloud(topic_model, topic=5, max.words = 10)
+cloud(topic_model, topic=8, max.words = 10)
+```
+
+View topic probabilities for the words luxury and studio:
+
+```{r}
+tidy(topic_model) %>% 
+  dplyr::filter(term %in% c('luxury', 'studio'), topic %in% c(5,8))
+```
+
+From this analysis the topic modelling seems to have picked out topics associated with the words luxury and studio which are associated with price in the expected direction.
+
