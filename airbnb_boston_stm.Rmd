@@ -46,4 +46,82 @@ dim(listings)
 colnames(listings)
 ```
 
+# Data preparation
+
+## Select data of interest
+
+Only require some of the fields for later analysis.  In particular we are interested in price and accomodation description.  We also only 
+
+```{r}
+stm_df <- listings %>%
+  dplyr::filter(grepl('Entire', room_type)) %>%
+  dplyr::transmute(id, score=log(as.numeric(gsub('\\$', '', price))), comments=description) %>%
+  dplyr::filter(!is.na(score)) 
+stm_df
+```
+
+## Tokenise and remove stopwords
+
+Tidy the comments using the tidytext 'bag of words' approach bu tokenising and then removing stopwords with an anti-join.
+
+```{r}
+tidy_comments <- stm_df %>%
+  unnest_tokens(word, comments) %>%
+  anti_join(stop_words)
+tidy_comments
+```
+
+## Examine the number of words extracted
+
+We can count the number of words present following tokensiation:
+
+```{r}
+tidy_comments %>%
+  count(word, sort=TRUE)
+```
+
+Then extract the most common 1000 words to be used in the analysis
+
+```{r}
+common_words <- tidy_comments %>%
+  count(word, sort=TRUE) %>%
+  top_n(1000,n) %>% dplyr::select(-n)
+common_words
+```
+
+## Create a document term frequency matrix
+
+The tidy comments data frame can be converted into a document term frequency matrix using the `tidytext::cast_dfm` function.  The object type is a `dfm` object from the `quanteda` package.  
+
+```{r}
+comments_dfm <- tidy_comments %>%
+  inner_join(common_words) %>%
+  count(id, word) %>%
+  arrange(id) %>%
+  tidytext::cast_dfm(id, word, n)
+comments_dfm
+```
+
+## Make a metadata data frame
+
+In order to include covariates in the Structural Topic Model, we also need to create a metadata data frame.  In this case the covariate of interest is the price of the listing.  Importantly the rownames of the metadata dataframe must be the document id (ie listing id in this case).
+
+```{r}
+comments_dfm_meta <- stm_df %>%
+  dplyr::group_by(id, score) %>%
+  dplyr::summarise(comments=dplyr::first(comments)) %>%
+  ungroup() %>%
+  dplyr::filter(id %in% docnames(comments_dfm)) %>%
+  dplyr::arrange(id) %>%
+  as.data.frame()
+rownames(comments_dfm_meta) <- comments_dfm_meta$listing_id
+```
+
+## Create an stm corpus object
+
+Now convert the dataframes in an stm corpus object
+
+```{r}
+comments_stmc <- asSTMCorpus(comments_dfm, data=comments_dfm_meta)
+```
 
