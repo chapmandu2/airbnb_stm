@@ -13,7 +13,7 @@ output:
 ---
 
 # Introduction
-
+In the analysis we use the structural topic modelling method from the R [stm package](https://www.structuraltopicmodel.com/) to analyse AirBnB listings data and identify topics that are related to the cost per night of the listing.
 
 # Analysis set up
 
@@ -51,13 +51,13 @@ colnames(listings)
 
 ## Select data of interest
 
-Only require some of the fields for later analysis.  In particular we are interested in price and accomodation description.  We also only 
+Only require some of the fields for later analysis.  In particular we are interested in price and accomodation description.  We also only want to analyse listings for an entire property.
 
 ```{r}
 stm_df <- listings %>%
   dplyr::filter(grepl('Entire', room_type)) %>%
-  dplyr::transmute(id, score=log(as.numeric(gsub('\\$', '', price))), comments=description) %>%
-  dplyr::filter(!is.na(score)) 
+  dplyr::transmute(id, price=log(as.numeric(gsub('\\$', '', price))), comments=description) %>%
+  dplyr::filter(!is.na(price)) 
 stm_df
 ```
 
@@ -109,7 +109,7 @@ In order to include covariates in the Structural Topic Model, we also need to cr
 
 ```{r}
 comments_dfm_meta <- stm_df %>%
-  dplyr::group_by(id, score) %>%
+  dplyr::group_by(id, price) %>%
   dplyr::summarise(comments=dplyr::first(comments)) %>%
   ungroup() %>%
   dplyr::filter(id %in% docnames(comments_dfm)) %>%
@@ -149,7 +149,7 @@ topic_store <- searchK(comments_stmc$documents,
   comments_stmc$vocab,
   K = n_topics,
   data = comments_stmc$data,
-  prevalence = ~ score,
+  prevalence = ~ price,
   max.em.its = 20,
   cores = 15)
 ```
@@ -177,7 +177,7 @@ topic_model <- stm(comments_stmc$documents,
   comments_stmc$vocab,
   K = best_k,
   data = comments_stmc$data,
-  prevalence = ~ score,
+  prevalence = ~ price,
   max.em.its = 20,
   verbose=FALSE)
 ```
@@ -193,7 +193,7 @@ summary(topic_model)
 Now estimate the effect of the price covariate on the prevalence of each topic:
 
 ```{r est-effect}
-est_effect <- estimateEffect(1:best_k ~ score, topic_model, meta=comments_dfm_meta)
+est_effect <- estimateEffect(1:best_k ~ price, topic_model, meta=comments_dfm_meta)
 ```
 
 
@@ -224,13 +224,13 @@ plot(topic_model, type='summary')
 First just plot the effect of price on topic prevalence for topics 1-4:
 
 ```{r}
-plot(est_effect, covariate='score', method='continuous', topics=1:4)
+plot(est_effect, covariate='price', method='continuous', topics=1:4)
 ```
 
 And now topics 5-8
 
 ```{r}
-plot(est_effect, covariate='score', method='continuous', topics=5:8)
+plot(est_effect, covariate='price', method='continuous', topics=5:8)
 ```
 
 ### Focus on topics 5 and 8
@@ -248,11 +248,15 @@ cloud(topic_model, topic=5, max.words = 10)
 cloud(topic_model, topic=8, max.words = 10)
 ```
 
-View topic probabilities for the words luxury and studio:
+View topic probabilities for the words luxury and studio - these topics are quite specific for these terms:
 
 ```{r}
 tidy(topic_model) %>% 
-  dplyr::filter(term %in% c('luxury', 'studio'), topic %in% c(5,8))
+  dplyr::filter(term %in% c('luxury', 'studio')) %>%
+  ggplot(aes(x=topic, y=beta, fill=term)) +
+    geom_col(alpha=0.8, show.legend=FALSE) +
+    facet_wrap(~term) +
+    labs(x='topic #', y=expression(beta)) + theme_bw()
 ```
 
 From this analysis the topic modelling seems to have picked out topics associated with the words luxury and studio which are associated with price in the expected direction.
@@ -275,7 +279,7 @@ Then extract slopes from the effectEstimate object:
 
 ```{r}
 slope_ests <- tidyr::crossing(topic=1:best_k, rep=1:20) %>%
-  mutate(slope_est = map2_dbl(topic, rep, ~est_effect$parameters[[.x]][[.y]]$est['score'])) %>%
+  mutate(slope_est = map2_dbl(topic, rep, ~est_effect$parameters[[.x]][[.y]]$est['price'])) %>%
   group_by(topic) %>%
   summarise(slope_est=mean(slope_est))
 slope_ests
@@ -293,9 +297,23 @@ topic_top_terms %>%
   inner_join(slope_ests) %>%
   mutate(topic = paste0('Topic ', topic)) %>%
   ggplot(aes(term, beta, fill=slope_est)) +
-    geom_col(alpha=0.8, show_legend=FALSE) +
+    geom_col(alpha=0.8, show.legend=FALSE) +
     scale_fill_gradient2(mid='lightgray') +
     facet_wrap(~ topic, scales='free_y') +
     coord_flip() +
     labs(x=NULL, y=expression(beta)) + theme_bw()
 ```
+
+# Conclusions
+Using structual topic modelling on AirBnb data we are able to identify topics that are related to high and low price listings.  For example, a topic associated with the term 'luxury' was associated with high price, and a topic associated with 'studio' was associated with low price.
+
+# Session Info
+
+```{r}
+Sys.time()
+sessionInfo()
+cat(paste(readLines('/etc/docker/docker_info.txt'), '\n'))
+cat(paste(readLines('/etc/docker/docker_build_history.txt'), '\n'))
+
+```
+
