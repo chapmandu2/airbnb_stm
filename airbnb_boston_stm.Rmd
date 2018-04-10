@@ -233,30 +233,37 @@ And now topics 5-8
 plot(est_effect, covariate='price', method='continuous', topics=5:8)
 ```
 
-### Focus on topics 5 and 8
+### Focus on topics 1 and 7
 
-What are topics 5 and 8?  These seem to have a positive and negative relationship with price respectively (up vs down slope).  Terms like boston and appartment tend to appear in many topics, so in this case looking at FREX, score and lift is useful as we see words exclusive to these topics.
+What are topics 1 and 7?  These seem to have a positive and negative relationship with price respectively (up vs down slope).  
 
 ```{r}
-labelTopics(topic_model, c(5,8), n=10)
+plot(est_effect, covariate='price', method='continuous', topics=c(1,7))
+```
+
+Terms like boston and appartment tend to appear in many topics, so in this case looking at FREX, score and lift is useful as we see words exclusive to these topics.
+
+```{r}
+labelTopics(topic_model, c(1,7), n=10)
 ```
 
 Generate a wordcloud of most common terms for each:
 
 ```{r}
-cloud(topic_model, topic=5, max.words = 10)
-cloud(topic_model, topic=8, max.words = 10)
+cloud(topic_model, topic=1, max.words = 10, color='red')
+cloud(topic_model, topic=7, max.words = 10, color='cyan')
 ```
 
 View topic probabilities for the words luxury and studio - these topics are quite specific for these terms:
 
 ```{r}
 tidy(topic_model) %>% 
-  dplyr::filter(term %in% c('luxury', 'studio')) %>%
-  ggplot(aes(x=topic, y=beta, fill=term)) +
+  dplyr::filter(term %in% c('stainless', 'station')) %>%
+  ggplot(aes(x=paste('Topic', topic), y=beta, fill=term)) +
     geom_col(alpha=0.8, show.legend=FALSE) +
-    facet_wrap(~term) +
-    labs(x='topic #', y=expression(beta)) + theme_bw()
+    facet_wrap(~term)  + 
+    labs(x='topic #', y=expression(beta)) + 
+    theme_bw() + theme(axis.text.x=element_text(angle=90, vjust=0.5))
 ```
 
 From this analysis the topic modelling seems to have picked out topics associated with the words luxury and studio which are associated with price in the expected direction.
@@ -298,7 +305,7 @@ topic_top_terms %>%
   mutate(topic = paste0('Topic ', topic)) %>%
   ggplot(aes(term, beta, fill=slope_est)) +
     geom_col(alpha=0.8, show.legend=FALSE) +
-    scale_fill_gradient2(mid='lightgray') +
+    scale_fill_gradient2(high='red', mid='lightgray', low='blue') +
     facet_wrap(~ topic, scales='free_y') +
     coord_flip() +
     labs(x=NULL, y=expression(beta)) + theme_bw()
