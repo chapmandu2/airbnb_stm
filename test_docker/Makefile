@@ -6,9 +6,9 @@ build:
 	docker build -t $(IMAGE_NAME) \
 	-t $(IMAGE_NAME) \
 	--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-	$(IMAGE_NAME)
+	.
 
 run:
 	docker run --name="$(CONTAINER_NAME)" \
 		-d -p 8787:8787 \
-		.
+		$(IMAGE_NAME)
